@@ -1,0 +1,168 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8" />
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<title>Binary File Editor</title>
+	<link rel="stylesheet" href="css/main.css" />
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.7.8/angular.js"></script>
+	
+	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.9.1/underscore-min.js"></script>
+	<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+
+	<script type="text/javascript" src="js/app.js"></script>
+</head>
+
+<body ng-app="myApp" ng-controller="MainController as mc">
+
+	<div style="padding: 8px">
+		<ul class="nav nav-tabs" id="myTab" role="tablist">
+			<li class="nav-item">
+			<a class="nav-link active" id="file-editor-tab" data-toggle="tab" href="#file-editor" role="tab" aria-controls="file-editor" aria-selected="true">
+				File Editor
+			</a>
+			</li>
+			<li class="nav-item">
+			<a class="nav-link" id="profile-tab" data-toggle="tab" href="#analyze-file" role="tab" aria-controls="analyze-file" aria-selected="false">
+				Analyze file
+			</a>
+			</li>
+			<li class="nav-item">
+			<a class="nav-link" id="about-tab" data-toggle="tab" href="#about" role="tab" aria-controls="about" aria-selected="false">
+				About
+			</a>
+			</li>
+		</ul>
+		<div class="tab-content" id="myTabContent">
+			<div class="tab-pane fade show active" id="file-editor" role="tabpanel" aria-labelledby="file-editor-tab">
+				<!---->
+				<div class="container">
+					<div class="row" style="padding-top: 8px">
+						<div class="col-md-6">
+							<div style="border: 1px #007bff dashed" class="text-center" file-drop ng-model="mc.binaryFile">
+								<input class="file-upload" type="file" id="binaryFile" onclick="this.value=null;" file-upload ng-model="mc.binaryFile" />
+								<h3 ng-if="!mc.binaryFile">choose binary file</h3>
+								<h3 ng-if="mc.binaryFile">{{ mc.binaryFile.name }}</h3>
+								<h3 ng-if="mc.binaryFile">{{ mc.binaryFile.size }} bytes</h3>
+							</div>
+						</div>
+						<div class="col-md-6">
+							<div style="border: 1px #007bff dashed" class="text-center" file-drop ng-model="mc.descriptionFile">
+								<input class="file-upload" type="file" id="descriptionFile" onclick="this.value=null;" file-upload ng-model="mc.descriptionFile" />
+								<h3 ng-if="!mc.descriptionFile">choose description file</h3>
+								<h3 ng-if="mc.descriptionFile">{{ mc.descriptionFile.name }}</h3>
+								<h3 ng-if="mc.descriptionFile">{{ mc.descriptionFile.size }} bytes</h3>
+							</div>
+						</div>
+					</div>
+					<div class="row" style="padding: 8px 0px">
+						<div class="col-md-12 d-flex justify-content-between align-items-center align-content-center">
+							<button type="button" class="btn btn-sm btn-outline-secondary extract" ng-click="mc.process()">Extract</button>
+							<button type="button" class="btn btn-sm btn-outline-secondary create" ng-click="mc.create()" ng-disabled="!mc.binaryFile || !mc.descriptionFile">Create</button>
+						</div>
+					</div>
+					<div class="row">
+						<div class="col-md-6" ng-repeat="item in mc.items" ng-if="item.mime">
+						  <div class="card mb-4 shadow-sm">
+							<div class="card-header d-flex justify-content-between">
+								<div><b>Offset:</b> {{item.offset}}</div><div><b>Length:</b> {{item.length}}</div>
+							</div>
+							<div class="card-body">
+								<div class="d-flex justify-content-around align-items-center align-content-center" ng-if="item.mime == 'image/gif'">
+									<img class="image-max-100" src="{{item.dataUrl}}" />
+									<img class="image-max-100" ng-if="item.newDataUrl" src="{{item.newDataUrl}}" />
+								</div>
+								<div class="d-flex justify-content-around align-items-center align-content-center" ng-if="item.mime == 'audio/mpeg'">
+									<my-audio>
+										<audio class="player" src="{{item.dataUrl}}" type="{{item.mime}}">
+										</audio>
+										<div class="btn-group controls">
+											<button type="button" class="btn btn-sm btn-outline-secondary play" style="line-height: 0;">
+												<svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="svg-play" width="16px" height="16px" viewBox="0 0 100 100">
+												  <polygon points="10,10 90,45 10,90"/>
+												</svg>
+											</button>
+											<button type="button" class="btn btn-sm btn-outline-secondary pause" style="line-height: 0;">
+												<svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="svg-pause" width="16px" height="16px" viewBox="0 0 100 100">
+													<polygon points="10,10 35,10 35,90 10,90"/>
+													<polygon points="65,10 90,10 90,90 65,90"/>
+												</svg>
+											</button>
+											<button type="button" class="btn btn-sm btn-outline-secondary stop" style="line-height: 0;">
+												<svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="svg-stop" width="16px" height="16px" viewBox="0 0 100 100">
+													<polygon points="10,10 90,10 90,90 10,90"/>
+												</svg>
+											</button>
+										</div>
+									</my-audio>
+									<my-audio ng-if="item.newDataUrl">
+										<audio class="player" src="{{item.newDataUrl}}" type="{{item.mime}}">
+										</audio>
+										<div class="btn-group controls">
+											<button type="button" class="btn btn-sm btn-outline-secondary play" style="line-height: 0;">
+												<svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="svg-play" width="16px" height="16px" viewBox="0 0 100 100">
+												  <polygon points="10,10 90,45 10,90"/>
+												</svg>
+											</button>
+											<button type="button" class="btn btn-sm btn-outline-secondary pause" style="line-height: 0;">
+												<svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="svg-pause" width="16px" height="16px" viewBox="0 0 100 100">
+													<polygon points="10,10 35,10 35,90 10,90"/>
+													<polygon points="65,10 90,10 90,90 65,90"/>
+												</svg>
+											</button>
+											<button type="button" class="btn btn-sm btn-outline-secondary stop" style="line-height: 0;">
+												<svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="svg-stop" width="16px" height="16px" viewBox="0 0 100 100">
+													<polygon points="10,10 90,10 90,90 10,90"/>
+												</svg>
+											</button>
+										</div>
+									</my-audio>
+								</div>
+								<div class="w-100" ng-if="item.mime == 'text/plain'">
+									<input class="form-control-sm w-100" ng-model="item.newText" max-length-in-bytes="item.length" />
+								</div>
+							</div>
+							<div class="card-footer d-flex justify-content-between align-items-center">
+								<div class="btn-group">
+									<a class="btn btn-sm btn-outline-secondary download" role="button" href="{{item.dataUrl}}" download="{{item.offset}}.{{item.extension}}" title="Download">
+										<svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="svg-download" width="16px" height="16px" viewBox="0 0 100 100">
+											<polygon points="10,10 90,10 90,20 10,20"></polygon>
+											<polygon points="40,30 60,30 60,40 90,40 50,90 10,40 40,40"/>
+										</svg>
+									</a>
+									<div role="button" class="btn btn-sm btn-outline-secondary upload" title="Upload">
+										<svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="svg-upload" width="16px" height="16px" viewBox="0 0 100 100">
+											<polygon points="50,10 90,60 60,60 60,70 40,70 40,60 10,60"/>
+											<polygon points="10,80 90,80 90,90 10,90"></polygon>
+										</svg>
+										<input class="file-upload" type="file" id="file-{{item.offset}}"
+										onclick="this.value=null;"
+										file-upload 
+										ng-model="item.newFile"
+										process-file="mc.processFile(item)"
+										max-file-size="item.length"
+										/>
+									</div>
+								</div>
+								<div><b>Type:</b> {{item.mime}}</div>
+							</div>
+						  </div>
+						</div>
+					</div>
+				</div>
+				<!---->
+			</div>
+			<div class="tab-pane fade" id="analyze-file" role="tabpanel" aria-labelledby="analyze-file-tab">
+			In this section you will be able to analyze your binary file, and prepere description file for it.</div>
+			<div class="tab-pane fade" id="about" role="tabpanel" aria-labelledby="about-tab">
+			Author: Dawid Lamperski
+			</div>
+		</div>
+	</div>
+	
+</body>
+</html>
