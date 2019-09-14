@@ -128,9 +128,13 @@
 		};
 	});
 	
-	app.filter('test', function() {
+	app.filter('hms', function() {
 		return function(x) {
-			return x;
+			var h = Math.floor(x / 3600000);
+			var m = Math.floor((x - h*3600000) / 60000);
+			var s = Math.floor((x - h*3600000 - m*60000) / 1000);
+			var ms = Math.floor(x % 1000);
+			return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}.${ms}`;
 		};
 	});
 
@@ -146,6 +150,22 @@
 		vm.create = create;
 		vm.outputBinaryFile = undefined;
 		vm.processFile = processFile;
+		vm.isSupportedImage = isSupportedImage;
+		vm.isSupportedAudio = isSupportedAudio;
+		vm.sort = sort;
+		vm.test = test;
+		vm.test2 = test2;
+		vm.progress = 0;
+		vm.sortBy = 'offset';
+		
+		function sort(sortBy) {
+			var idx = vm.sortBy.indexOf(sortBy);
+			if (idx != -1) {
+				sortBy = (idx == 0 ? '-' + sortBy : sortBy.slice(0));
+			}
+			vm.sortBy = sortBy;
+			
+		}
 
 		function init() {
 			// $scope.$watch('mc.binaryFile', function(newValue, oldValue) {
@@ -211,6 +231,14 @@
 			vm.items = _.sortBy(vm.items, 'offset');
 		}
 		
+		function isSupportedImage(mime) {
+			return ['image/gif', 'image/jpeg', 'image/png', 'image/bmp'].indexOf(mime) != -1;
+		}
+		
+		function isSupportedAudio(mime) {
+			return ['audio/mpeg', 'audio/wav'].indexOf(mime) != -1;
+		}
+		
 		function create() {
 			var data = [];
 			for (var i=0; i<vm.items.length; i++) {
@@ -236,16 +264,80 @@
 			window.location.href = dataURL;
 		}
 		
-		function process() {
-			if (vm.binaryFile && vm.descriptionFile) {
+		function process(type) {
+			var functions = { 'png' : searchPNGs, 'jpg' : searchJPGs, 'gif' : searchGIFs, 'bmp' : searchBMPs, 'wav' : searchWAVs, 'mp3' : searchMP3s };
+			if (functions[type] == undefined) {
+				alert('Unsupported type!');
+				return;
+			}
+			if (vm.binaryFile) {
+				var c = 0;
+				
+				
+				var busy = $('#busy');
+				busy.modal('show').on('shown.bs.modal', function (e) {
+					busy.modal('show').off('shown.bs.modal');
+					var start = performance.now();
+					if (functions[type]) {
+						functions[type](vm.binaryFile, function(offset, length, mime, extension, width, height, bytes, duration) {
+							c++;
+							var data = new Blob([bytes], {
+								type: mime
+							});
+							var dataURL = window.URL.createObjectURL(data);
+							var obj = { 'offset' : offset, 'length' : length, 'mime' : mime, 'extension' : extension, 'array' : bytes, 'dataUrl' : dataURL};
+							if (isSupportedImage(mime)) {
+								obj = Object.assign({}, obj, {'width' : width, 'height' : height});
+							}
+							if (isSupportedAudio(mime)) {
+								obj = Object.assign({}, obj, {'duration' : duration});
+							}
+							let found = vm.items.find(item => item.offset == obj.offset);
+							if (!found) {
+								vm.items.push(obj);
+								$scope.$apply();
+							}
+						}, function () {
+							console.log('count', c, 'time', performance.now() - start);
+							vm.progress = 0;
+							busy.modal('hide');
+						}, function(progress) {
+							vm.progress = progress;
+							$scope.$apply();
+						});
+					}
+				});
+				
+
+			}
+		}
+		
+		function test() {
+			if (vm.items.length > 0) {
 				readBinaryFile(vm.binaryFile, null, function (offsets) {
 					console.log("done");
 				});
 			} else {
-				alert("Choose binary and description files first!");
+				alert("choose binary and description files first!");
 			}
 		}
-
+		
+		function test2() {
+			if (vm.items.length > 0) {
+				var output = [];
+				for (var i=0; i<vm.items.length; i++) {
+					var item = vm.items[i];
+					output.push({ 'offset' : item.offset, 'length' : item.length, 'mime' : item.mime, 'extension' : item.extension});
+				}
+				var blob = new Blob([JSON.stringify(output)], {type : 'application/json;charset=utf-8'});
+				var dataURL = window.URL.createObjectURL(blob);
+				vm.outputBinaryFile = dataURL;
+				window.location.href = dataURL;
+			} else {
+				alert("choose binary and description files first!");
+			}
+		}
+	
 		function readJsonFile(file, onSuccessCallback, onErrorCallback) {
 			var readEventHandler = function(evt) {
 				if (evt.target.error == null) {
@@ -323,7 +415,7 @@
 
 			chunkReaderBlock(vm.items[item].offset, vm.items[item].length, file);
 		}
-		
+			
 		function decodeUtf8(arrayBuffer) {
 			var result = "";
 			var i = 0;
