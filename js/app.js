@@ -10,6 +10,10 @@
 		return {
 			restrict: 'A',
 			require: "ngModel",
+			scope: {
+				processFile: '&',
+				maxFileSize: '='
+			},
 			link: function(scope, element, attrs, ngModel) {
 				var processDragOverOrEnter;
 				processDragOverOrEnter = function(event) {
@@ -27,8 +31,13 @@
 						event.preventDefault();
 					}
 					if (event.dataTransfer.files.length == 1) {
-						ngModel.$setViewValue(event.dataTransfer.files[0]);
-						scope.$apply();
+						if (!scope.maxFileSize || (scope.maxFileSize && event.dataTransfer.files[0].size <= scope.maxFileSize)) {
+							ngModel.$setViewValue(event.dataTransfer.files[0]);
+							scope.$apply();
+							scope.processFile();
+						} else {
+							alert('File too big! Max file size: ' + scope.maxFileSize + ' bytes');
+						}
 					}
 					return false;
 				});
@@ -50,6 +59,7 @@
 					console.log(files[0]);
 					if (!scope.maxFileSize || (scope.maxFileSize && files[0].size <= scope.maxFileSize)) {
 						ngModel.$setViewValue(files[0]);
+						scope.$apply();
 						scope.processFile();
 					} else {
 						alert('File too big! Max file size: ' + scope.maxFileSize + ' bytes');
@@ -137,6 +147,13 @@
 			return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}.${ms}`;
 		};
 	});
+	
+	app.filter('ffs', function() {
+		return function (x) {
+			const i = Math.floor(Math.log(x) / Math.log(1024));
+			return parseFloat((x / Math.pow(1024, i)).toFixed(3)) + ' ' + (i>0?" KMGTP".charAt(i):'') + 'B';
+		};
+	});
 
 	MainController.$inject = ["$scope"];
 
@@ -144,6 +161,7 @@
 		let vm = this;
 
 		vm.items = [];
+		vm.itemsPart = [];
 		vm.binaryFile = undefined;
 		vm.descriptionFile = undefined;
 		vm.process = process;
@@ -153,11 +171,19 @@
 		vm.isSupportedImage = isSupportedImage;
 		vm.isSupportedAudio = isSupportedAudio;
 		vm.sort = sort;
-		vm.test = test;
-		vm.test2 = test2;
+		vm.createDescriptionFile = createDescriptionFile;
 		vm.progress = 0;
 		vm.sortBy = 'offset';
-		
+		vm.page = 1;
+		vm.goToPage = function(page) {
+			vm.page = page;
+		};
+		vm.pages = function() {
+			return Math.ceil(vm.items.length / 60);
+		};
+		vm.mode = true;
+		vm.clearItems = function() { vm.items = []; $scope.$apply(); };
+
 		function sort(sortBy) {
 			var idx = vm.sortBy.indexOf(sortBy);
 			if (idx != -1) {
@@ -168,18 +194,13 @@
 		}
 
 		function init() {
-			// $scope.$watch('mc.binaryFile', function(newValue, oldValue) {
-				// if (newValue) {
-					// readBinaryFile(vm.binaryFile, null, function (offsets) {
-						// console.log("done");
-					// });
-				// }
-			// });
 			$scope.$watch('mc.descriptionFile', function(newValue, oldValue) {
 				if (newValue) {
 					readJsonFile(vm.descriptionFile, function(items) {
-						vm.items = items;
-						fillGaps(vm.binaryFile.size);
+						if (vm.binaryFile) {
+							vm.items = items;
+							processBinaryFile();
+						}
 					}, function(error) {
 						console.log("something went wrong", error);						
 					});
@@ -199,40 +220,44 @@
 			});
 		}
 		
-		function fillGaps(fileSize) {
+		function fillGaps(items, onProgress, onGapsFilled) {
+			items = _.sortBy(items, 'offset');
 			var missing = [];
-			vm.items = _.sortBy(vm.items, 'offset');
-			if (vm.items.length > 0) {
+			var fileSize = vm.binaryFile.size;
+			//array needs to have at least one item!
+			if (items.length > 0) {
 				//before
-				if (vm.items[0].offset != 0) {
-					missing.push({'offset' : 0, 'length' : vm.items[0].offset});
+				var firstItem = items[0];
+				if (firstItem.offset != 0) {
+					missing.push({'offset' : 0, 'length' : firstItem.offset});
 				}
 				//middle
-				if (vm.items.length >= 2) {
-					for (var i=0; i<vm.items.length-1; i++) {
-						var currentItem = vm.items[i];
-						var nextItem = vm.items[i+1];
+				if (items.length >= 2) {
+					for (var i=0; i<items.length-1; i++) {
+						var currentItem = items[i];
+						var nextItem = items[i+1];
 						var newOffset = currentItem.offset+currentItem.length;
-						if (newOffset != nextItem.offset) {
+						if (nextItem.offset > newOffset) {
 							missing.push({'offset' : newOffset, 'length' : nextItem.offset-newOffset});
+						} else if (nextItem.offset < newOffset) {
+							console.log("Item @", currentItem.offset, "is broken");
 						}
 					}
 				}
 				//last
-				if (fileSize) {
-					var lastItem = vm.items[vm.items.length-1];
-					var offset = lastItem.offset + lastItem.length;
-					if (offset < fileSize) {
-						missing.push({'offset' : offset, 'length' : fileSize-offset});
-					}
+				var lastItem = items[items.length-1];
+				var offset = lastItem.offset + lastItem.length;
+				if (offset < fileSize) {
+					missing.push({'offset' : offset, 'length' : fileSize-offset});
 				}
 			}
-			vm.items = vm.items.concat(missing);
-			vm.items = _.sortBy(vm.items, 'offset');
+			
+			readBinaryFile(vm.binaryFile, missing, onProgress, onGapsFilled);
 		}
 		
 		function isSupportedImage(mime) {
-			return ['image/gif', 'image/jpeg', 'image/png', 'image/bmp'].indexOf(mime) != -1;
+			//should icon has mime 'image/vnd.microsoft.icon'?
+			return ['image/gif', 'image/jpeg', 'image/png', 'image/bmp', 'image/x-icon'].indexOf(mime) != -1;
 		}
 		
 		function isSupportedAudio(mime) {
@@ -240,22 +265,44 @@
 		}
 		
 		function create() {
+			var busy = $('#busy');
+			busy.modal('show').on('shown.bs.modal', function (e) {
+				busy.modal('show').off('shown.bs.modal');
+			
+				//we need to fill gaps between found items
+				fillGaps(vm.items, function(progress) {
+					vm.progress = progress;
+					$scope.$apply();
+				}, function(gaps) {
+					gaps = gaps.concat(vm.items);
+					var allTogether = _.sortBy(gaps, 'offset');
+					
+					createNewImage(allTogether);
+					
+					//reset progres and hide modal
+					vm.progress = 0;
+					busy.modal('hide');
+				});
+			});
+		}
+		
+		function createNewImage(items) {
 			var data = [];
-			for (var i=0; i<vm.items.length; i++) {
-				if (vm.items[i].mime == 'text/plain') {
-					vm.items[i].newArray = new TextEncoder().encode(vm.items[i].newText);
-					vm.items[i].newLength = vm.items[i].newArray.length;
+			for (var i=0; i<items.length; i++) {
+				if (items[i].mime == 'text/plain') {
+					items[i].newArray = new TextEncoder().encode(items[i].newText);
+					items[i].newLength = items[i].newArray.length;
 				}
-				if (vm.items[i].newArray) {
-					data.push(vm.items[i].newArray);
-					if (vm.items[i].newLength < vm.items[i].length) {
+				if (items[i].newArray) {
+					data.push(items[i].newArray);
+					if (items[i].newLength < items[i].length) {
 						//todo: fill with zeros
-						var size = vm.items[i].length - vm.items[i].newLength;
+						var size = items[i].length - items[i].newLength;
 						let zeros = new ArrayBuffer(size);
 						data.push(new Uint8Array(zeros));
 					}
 				} else {
-					data.push(vm.items[i].array);
+					data.push(items[i].array);
 				}
 			}
 			var blob = new Blob(data, {type : 'application/octet-stream'});
@@ -265,15 +312,13 @@
 		}
 		
 		function process(type) {
-			var functions = { 'png' : searchPNGs, 'jpg' : searchJPGs, 'gif' : searchGIFs, 'bmp' : searchBMPs, 'wav' : searchWAVs, 'mp3' : searchMP3s };
+			var functions = { 'png' : searchPNGs, 'jpg' : searchJPGs, 'gif' : searchGIFs, 'bmp' : searchBMPs, 'wav' : searchWAVs, 'mp3' : searchMP3s, 'tiff' : searchTIFFs, 'ico' : searchICOs };
 			if (functions[type] == undefined) {
 				alert('Unsupported type!');
 				return;
 			}
 			if (vm.binaryFile) {
 				var c = 0;
-				
-				
 				var busy = $('#busy');
 				busy.modal('show').on('shown.bs.modal', function (e) {
 					busy.modal('show').off('shown.bs.modal');
@@ -281,22 +326,25 @@
 					if (functions[type]) {
 						functions[type](vm.binaryFile, function(offset, length, mime, extension, width, height, bytes, duration) {
 							c++;
-							var data = new Blob([bytes], {
-								type: mime
-							});
-							var dataURL = window.URL.createObjectURL(data);
-							var obj = { 'offset' : offset, 'length' : length, 'mime' : mime, 'extension' : extension, 'array' : bytes, 'dataUrl' : dataURL};
-							if (isSupportedImage(mime)) {
-								obj = Object.assign({}, obj, {'width' : width, 'height' : height});
+							if (true) {
+								var data = new Blob([bytes], {
+									type: mime
+								});
+								var dataURL = window.URL.createObjectURL(data);
+								var obj = { 'offset' : offset, 'length' : length, 'mime' : mime, 'extension' : extension, 'array' : bytes, 'dataUrl' : dataURL};
+								if (isSupportedImage(mime)) {
+									obj = Object.assign({}, obj, {'width' : width, 'height' : height});
+								}
+								if (isSupportedAudio(mime)) {
+									obj = Object.assign({}, obj, {'duration' : duration});
+								}
+								let found = vm.items.find(item => item.offset == obj.offset);
+								if (!found) {
+									vm.items.push(obj);
+									$scope.$apply();
+								}
 							}
-							if (isSupportedAudio(mime)) {
-								obj = Object.assign({}, obj, {'duration' : duration});
-							}
-							let found = vm.items.find(item => item.offset == obj.offset);
-							if (!found) {
-								vm.items.push(obj);
-								$scope.$apply();
-							}
+							//console.log(offset, length, width, height);
 						}, function () {
 							console.log('count', c, 'time', performance.now() - start);
 							vm.progress = 0;
@@ -312,17 +360,26 @@
 			}
 		}
 		
-		function test() {
+		function processBinaryFile() {
 			if (vm.items.length > 0) {
-				readBinaryFile(vm.binaryFile, null, function (offsets) {
-					console.log("done");
+				var busy = $('#busy');
+				busy.modal('show').on('shown.bs.modal', function (e) {
+					busy.modal('show').off('shown.bs.modal');
+				
+					readBinaryFile(vm.binaryFile, vm.items, function(progress) {
+						vm.progress = progress;
+						$scope.$apply();
+					}, function (offsets) {
+						vm.progress = 0;
+						busy.modal('hide');
+					});
 				});
 			} else {
-				alert("choose binary and description files first!");
+				alert("Choose binary and description files first!");
 			}
 		}
 		
-		function test2() {
+		function createDescriptionFile() {
 			if (vm.items.length > 0) {
 				var output = [];
 				for (var i=0; i<vm.items.length; i++) {
@@ -332,9 +389,15 @@
 				var blob = new Blob([JSON.stringify(output)], {type : 'application/json;charset=utf-8'});
 				var dataURL = window.URL.createObjectURL(blob);
 				vm.outputBinaryFile = dataURL;
-				window.location.href = dataURL;
+				
+				var temporaryLink = document.createElement('a');
+				temporaryLink.download = 'desc.json';
+				temporaryLink.href = dataURL;
+				temporaryLink.click();
+				//this solution doesn't allow to specify name
+				//window.location.href = dataURL;
 			} else {
-				alert("choose binary and description files first!");
+				alert("Choose binary and try to find some 'items' inside first!");
 			}
 		}
 	
@@ -344,7 +407,7 @@
 					var arrayBuffer = this.result,
 					array = new Uint8Array(arrayBuffer);
 					try {
-						var binaryString = String.fromCharCode.apply(null, array);
+						var binaryString = new TextDecoder('utf-8').decode(array);
 						var json = JSON.parse(binaryString);
 						onSuccessCallback(json);
 					} catch (error) {
@@ -375,7 +438,7 @@
 			reader.readAsArrayBuffer(file);
 		}
 		
-		function readBinaryFile(file, onItemCallback, onSuccessCallback) {
+		function readBinaryFile(file, items, onProgress, onSuccessCallback) {
 			var chunkReaderBlock = null;
 			var item = 0;
 
@@ -383,27 +446,31 @@
 				if (evt.target.error == null) {
 					var arrayBuffer = this.result,
 						array = new Uint8Array(arrayBuffer);
-					vm.items[item].array = array;
-					var data = new Blob([array], {
-						type: vm.items[item].mime
-					});
-					if (vm.items[item].mime == 'text/plain') {
-						//var binaryString = String.fromCharCode.apply(null, array);
-						var text = decodeUtf8(array);
-						vm.items[item].text = text;
-						vm.items[item].newText = text;
+					items[item].array = array;
+					if (items[item].mime) {
+						var data = new Blob([array], {
+							type: items[item].mime
+						});
+						if (items[item].mime == 'text/plain') {
+							var text = decodeUtf8(array);
+							items[item].text = text;
+							items[item].newText = text;
+						}
+						var dataURL = window.URL.createObjectURL(data);
+						items[item].dataUrl = dataURL;
 					}
-					var dataURL = window.URL.createObjectURL(data);
-					vm.items[item].dataUrl = dataURL;
+					if (typeof(onProgress) === "function") {
+						onProgress(~~(100*items[item].offset/file.size));
+					}
 				} else {
 					return;
 				}
-				if (++item >= vm.items.length) {
+				if (++item >= items.length) {
 					$scope.$apply();
-					onSuccessCallback(vm.items);
+					onSuccessCallback(items);
 					return;
 				}
-				chunkReaderBlock(vm.items[item].offset, vm.items[item].length, file);
+				chunkReaderBlock(items[item].offset, items[item].length, file);
 			}
 
 			chunkReaderBlock = function(_offset, length, _file) {
@@ -413,7 +480,7 @@
 				r.readAsArrayBuffer(blob);
 			}
 
-			chunkReaderBlock(vm.items[item].offset, vm.items[item].length, file);
+			chunkReaderBlock(items[item].offset, items[item].length, file);
 		}
 			
 		function decodeUtf8(arrayBuffer) {

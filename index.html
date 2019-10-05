@@ -13,7 +13,6 @@
 	  window.dataLayer = window.dataLayer || [];
 	  function gtag(){dataLayer.push(arguments);}
 	  gtag('js', new Date());
-
 	  gtag('config', 'UA-145770357-1');
 	</script>
 	
@@ -44,182 +43,188 @@
 		</div>
 	  </div>
 	</div>
-	
-	
-	<div style="padding: 8px">
-		<ul class="nav nav-tabs" id="myTab" role="tablist">
-			<li class="nav-item">
-			<a class="nav-link active" id="file-editor-tab" data-toggle="tab" href="#file-editor" role="tab" aria-controls="file-editor" aria-selected="true">
-				File Editor
-			</a>
-			</li>
-			<li class="nav-item">
-			<a class="nav-link" id="profile-tab" data-toggle="tab" href="#analyze-file" role="tab" aria-controls="analyze-file" aria-selected="false">
-				Analyze file
-			</a>
-			</li>
-			<li class="nav-item">
-			<a class="nav-link" id="about-tab" data-toggle="tab" href="#about" role="tab" aria-controls="about" aria-selected="false">
-				About
-			</a>
-			</li>
-		</ul>
-		<div class="tab-content" id="myTabContent">
-			<div class="tab-pane fade show active" id="file-editor" role="tabpanel" aria-labelledby="file-editor-tab">
-				<!---->
-				<div class="container">
-					<div class="row" style="padding-top: 8px">
-						<div class="col-md-6">
-							<div style="border: 1px #007bff dashed" class="text-center" file-drop ng-model="mc.binaryFile">
-								<input class="file-upload" type="file" id="binaryFile" onclick="this.value=null;" file-upload ng-model="mc.binaryFile" />
-								<h3 ng-if="!mc.binaryFile">choose binary file</h3>
-								<h3 ng-if="mc.binaryFile">{{ mc.binaryFile.name }}</h3>
-								<h3 ng-if="mc.binaryFile">{{ mc.binaryFile.size }} bytes</h3>
-							</div>
-						</div>
-						<div class="col-md-6">
-							<div style="border: 1px #007bff dashed" class="text-center" file-drop ng-model="mc.descriptionFile">
-								<input class="file-upload" type="file" id="descriptionFile" onclick="this.value=null;" file-upload ng-model="mc.descriptionFile" />
-								<h3 ng-if="!mc.descriptionFile">choose description file</h3>
-								<h3 ng-if="mc.descriptionFile">{{ mc.descriptionFile.name }}</h3>
-								<h3 ng-if="mc.descriptionFile">{{ mc.descriptionFile.size }} bytes</h3>
-							</div>
-						</div>
-					</div>
-					<div class="row" style="padding: 8px 0px">
-						<div class="col-md-12 d-flex justify-content-between align-items-center align-content-center">
-							<div>
-								<button type="button" class="btn btn-sm btn-outline-secondary extract" ng-click="mc.test()">test</button>
-								<button type="button" class="btn btn-sm btn-outline-secondary extract" ng-click="mc.test2()">test2</button>
-							</div>
-							<div>
-								<button type="button" class="btn btn-sm btn-outline-secondary extract" ng-click="mc.process('gif')">GIF</button>
-								<button type="button" class="btn btn-sm btn-outline-secondary extract" ng-click="mc.process('png')">PNG</button>
-								<button type="button" class="btn btn-sm btn-outline-secondary extract" ng-click="mc.process('jpg')">JPG</button>
-								<button type="button" class="btn btn-sm btn-outline-secondary extract" ng-click="mc.process('bmp')">BMP</button>
-								<button type="button" class="btn btn-sm btn-outline-secondary extract" ng-click="mc.process('wav')">WAV</button>
-								<button type="button" class="btn btn-sm btn-outline-secondary extract" ng-click="mc.process('mp3')">MP3</button>
-							</div>
-							<div class="dropdown show">
-								<a class="btn btn-secondary dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-								Sort by '{{mc.sortBy}}'
-								</a>
-								<div class="dropdown-menu" aria-labelledby="dropdownMenuLink">
-									<a class="dropdown-item" ng-click="mc.sort('offset')">Offset</a>
-									<a class="dropdown-item" ng-click="mc.sort('mime')">Mime type</a>
-									<a class="dropdown-item" ng-click="mc.sort('length')">Length</a>
-								</div>
-							</div>
-							<button type="button" class="btn btn-sm btn-outline-secondary create" ng-click="mc.create()" ng-disabled="!mc.binaryFile || !mc.descriptionFile">Create</button>
-						</div>
-					</div>
-					<div class="row">
-						<div class="col-md-6" ng-repeat="item in mc.items | orderBy:mc.sortBy" ng-if="item.mime">
-						  <div class="card mb-4 shadow-sm">
-							<div class="card-header d-flex justify-content-between flex-wrap" style="font-size: x-small;">
-								<div class="col-6"><b>Type:</b> {{item.mime}}</div>
-								<div class="col-6"><b>Offset:</b> {{item.offset}}</div>
-								<div class="col-6"><b>Length:</b> {{item.length}}</div>
-								<div class="col-6" ng-if="item.width"><b>Dimensions:</b> {{item.width}}x{{item.height}}</div>
-								<div class="col-6" ng-if="item.duration"><b>Duration:</b> {{item.duration | hms}}</div>
-							</div>
-							<div class="card-body" style="background-color: #d3d3d370">
-								<div class="d-flex justify-content-around align-items-center align-content-center" ng-if="mc.isSupportedImage(item.mime)">
-									<img class="image-max-100" ng-src="{{item.dataUrl}}" />
-									<img class="image-max-100" ng-if="item.newDataUrl" ng-src="{{item.newDataUrl}}" />
-								</div>
-								<div class="d-flex justify-content-around align-items-center align-content-center" ng-if="mc.isSupportedAudio(item.mime)">
-									<my-audio>
-										<audio class="player" ng-src="{{item.dataUrl}}" type="{{item.mime}}">
-										</audio>
-										<div class="btn-group controls">
-											<button type="button" class="btn btn-sm btn-outline-secondary play" style="line-height: 0;">
-												<svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="svg-play" width="16px" height="16px" viewBox="0 0 100 100">
-												  <polygon points="10,10 90,45 10,90"/>
-												</svg>
-											</button>
-											<button type="button" class="btn btn-sm btn-outline-secondary pause" style="line-height: 0;">
-												<svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="svg-pause" width="16px" height="16px" viewBox="0 0 100 100">
-													<polygon points="10,10 35,10 35,90 10,90"/>
-													<polygon points="65,10 90,10 90,90 65,90"/>
-												</svg>
-											</button>
-											<button type="button" class="btn btn-sm btn-outline-secondary stop" style="line-height: 0;">
-												<svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="svg-stop" width="16px" height="16px" viewBox="0 0 100 100">
-													<polygon points="10,10 90,10 90,90 10,90"/>
-												</svg>
-											</button>
-										</div>
-									</my-audio>
-									<my-audio ng-if="item.newDataUrl">
-										<audio class="player" ng-src="{{item.newDataUrl}}" type="{{item.mime}}">
-										</audio>
-										<div class="btn-group controls">
-											<button type="button" class="btn btn-sm btn-outline-secondary play" style="line-height: 0;">
-												<svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="svg-play" width="16px" height="16px" viewBox="0 0 100 100">
-												  <polygon points="10,10 90,45 10,90"/>
-												</svg>
-											</button>
-											<button type="button" class="btn btn-sm btn-outline-secondary pause" style="line-height: 0;">
-												<svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="svg-pause" width="16px" height="16px" viewBox="0 0 100 100">
-													<polygon points="10,10 35,10 35,90 10,90"/>
-													<polygon points="65,10 90,10 90,90 65,90"/>
-												</svg>
-											</button>
-											<button type="button" class="btn btn-sm btn-outline-secondary stop" style="line-height: 0;">
-												<svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="svg-stop" width="16px" height="16px" viewBox="0 0 100 100">
-													<polygon points="10,10 90,10 90,90 10,90"/>
-												</svg>
-											</button>
-										</div>
-									</my-audio>
-								</div>
-								<div class="w-100" ng-if="item.mime == 'text/plain'">
-									<input class="form-control-sm w-100" ng-model="item.newText" max-length-in-bytes="item.length" />
-								</div>
-							</div>
-							<div class="card-footer d-flex justify-content-between align-items-center">
-								<div class="btn-group">
-									<a class="btn btn-sm btn-outline-secondary download" role="button" href="{{item.dataUrl}}" download="{{item.offset}}.{{item.extension}}" title="Download">
-										<svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="svg-download" width="16px" height="16px" viewBox="0 0 100 100">
-											<polygon points="10,10 90,10 90,20 10,20"></polygon>
-											<polygon points="40,30 60,30 60,40 90,40 50,90 10,40 40,40"/>
-										</svg>
-									</a>
-									<div role="button" class="btn btn-sm btn-outline-secondary upload" title="Upload">
-										<svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="svg-upload" width="16px" height="16px" viewBox="0 0 100 100">
-											<polygon points="50,10 90,60 60,60 60,70 40,70 40,60 10,60"/>
-											<polygon points="10,80 90,80 90,90 10,90"></polygon>
-										</svg>
-										<input class="file-upload" type="file" id="file-{{item.offset}}"
-										onclick="this.value=null;"
-										file-upload 
-										ng-model="item.newFile"
-										process-file="mc.processFile(item)"
-										max-file-size="item.length"
-										/>
-									</div>
-								</div>
-							</div>
-						  </div>
-						</div>
-					</div>
+
+	<div style="height: 100vh; display: flex;flex-direction: column;">
+		<div class="header" style="padding: 8px;">
+			<div class="btn btn-sm btn-primary" style="position: relative;">
+				<div class="text-center" file-drop ng-model="mc.binaryFile" process-file="mc.clearItems()">
+					<input class="file-upload" type="file" id="binaryFile" onclick="this.value=null;" file-upload ng-model="mc.binaryFile" process-file="mc.clearItems()" />
+					binary
 				</div>
-				<!---->
 			</div>
-			<div class="tab-pane fade" id="analyze-file" role="tabpanel" aria-labelledby="analyze-file-tab">
-			In this section you will be able to analyze your binary file, and prepere description file for it.</div>
-			<div class="tab-pane fade" id="about" role="tabpanel" aria-labelledby="about-tab">
-			This program is just a proof of concept of "Binary File Editor"/"Binary File Patcher" which works in your browser.<br />
-			Example description file:
-			<pre>
-			[
-				{"offset" : 3294656,"length" : 6, "mime" : "text/plain", "extension" : "txt" },
-				{"offset" : 6530430,"length" : 345548, "mime" : "audio/mpeg", "extension" : "mp3" },
-				{"offset" : 6010656,"length" : 38301, "mime" : "image/gif", "extension" : "gif" }
-			]
-			</pre>
-			Author: Dawid Lamperski
+			<div class="dropdown show" style="display: inline;" ng-if="mc.binaryFile">
+				<a class="btn btn-sm btn-primary dropdown-toggle" href="#" role="button" id="jsonDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+				Mode '{{mc.mode ? 'JSON' : 'Search'}}'
+				</a>
+				<div class="dropdown-menu" aria-labelledby="jsonDropdown">
+					<a class="dropdown-item" ng-click="mc.mode=true;">JSON</a>
+					<a class="dropdown-item" ng-click="mc.mode=false;">Search</a>
+				</div>
+			</div>
+			<div class="btn btn-sm btn-outline-primary" style="position: relative;" ng-if="mc.mode && mc.binaryFile">
+				<div class="text-center" file-drop ng-model="mc.descriptionFile">
+					<input class="file-upload" type="file" id="descriptionFile" onclick="this.value=null;" file-upload ng-model="mc.descriptionFile" />
+					JSON
+				</div>
+			</div>
+			<div class="btn-group btn-group-sm" role="group" ng-if="!mc.mode && mc.binaryFile">
+				<div class="btn btn-sm btn-outline-primary" ng-click="mc.process('gif')">GIF</div>
+				<div class="btn btn-sm btn-outline-primary" ng-click="mc.process('png')">PNG</div>
+				<div class="btn btn-sm btn-outline-primary" ng-click="mc.process('jpg')">JPG</div>
+				<div class="btn btn-sm btn-outline-primary" ng-click="mc.process('bmp')">BMP</div>
+				<div class="btn btn-sm btn-outline-primary" ng-click="mc.process('wav')">WAV</div>
+				<div class="btn btn-sm btn-outline-primary" ng-click="mc.process('mp3')">MP3</div>
+			</div>
+			<div class="dropdown show" style="display: inline;" ng-if="mc.items.length > 0">
+				<a class="btn btn-sm btn-secondary dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+				Sort by '{{mc.sortBy}}'
+				</a>
+				<div class="dropdown-menu" aria-labelledby="dropdownMenuLink">
+					<a class="dropdown-item" ng-click="mc.sort('offset')">Offset</a>
+					<a class="dropdown-item" ng-click="mc.sort('mime')">Mime type</a>
+					<a class="dropdown-item" ng-click="mc.sort('length')">Length</a>
+				</div>
+			</div>
+		</div>
+		<!---->
+		<div class="main" style="overflow: auto; flex: 1 1 100%;">
+			<div style="display: flex; flex-wrap: wrap;">
+				<div class="col-lg-4 col-md-6 col-xl-3" ng-repeat="item in mc.items.slice((mc.page-1)*60, (mc.page-1)*60 + 60) | orderBy:mc.sortBy" ng-if="item.mime">
+				  <div class="card mb-4 shadow-sm" file-drop ng-model="item.newFile" process-file="mc.processFile(item)" max-file-size="item.length">
+					<div class="card-header d-flex justify-content-between flex-wrap" style="font-size: x-small;">
+						<div class="col-6"><b>Type:</b> {{item.mime}}</div>
+						<div class="col-6"><b>Offset:</b> {{item.offset}}</div>
+						<div class="col-6" title="{{item.length}} Bytes"><b>Length:</b> {{item.length | ffs}}</div>
+						<div class="col-6" ng-if="item.width"><b>Dimensions:</b> {{item.width}}x{{item.height}}</div>
+						<div class="col-6" ng-if="item.duration"><b>Duration:</b> {{item.duration | hms}}</div>
+					</div>
+					<div class="card-body" style="background-color: #d3d3d370">
+						<div class="d-flex justify-content-around align-items-center align-content-center" ng-if="mc.isSupportedImage(item.mime)">
+							<img class="image-max-100" ng-src="{{item.dataUrl}}" />
+							<img class="image-max-100" ng-if="item.newDataUrl" ng-src="{{item.newDataUrl}}" />
+						</div>
+						<div class="d-flex justify-content-around align-items-center align-content-center" ng-if="mc.isSupportedAudio(item.mime)">
+							<my-audio>
+								<audio class="player" ng-src="{{item.dataUrl}}" type="{{item.mime}}">
+								</audio>
+								<div class="btn-group controls">
+									<button type="button" class="btn btn-sm btn-outline-secondary play" style="line-height: 0;">
+										<svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="svg-play" width="16px" height="16px" viewBox="0 0 100 100">
+										  <polygon points="10,10 90,45 10,90"/>
+										</svg>
+									</button>
+									<button type="button" class="btn btn-sm btn-outline-secondary pause" style="line-height: 0;">
+										<svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="svg-pause" width="16px" height="16px" viewBox="0 0 100 100">
+											<polygon points="10,10 35,10 35,90 10,90"/>
+											<polygon points="65,10 90,10 90,90 65,90"/>
+										</svg>
+									</button>
+									<button type="button" class="btn btn-sm btn-outline-secondary stop" style="line-height: 0;">
+										<svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="svg-stop" width="16px" height="16px" viewBox="0 0 100 100">
+											<polygon points="10,10 90,10 90,90 10,90"/>
+										</svg>
+									</button>
+								</div>
+							</my-audio>
+							<my-audio ng-if="item.newDataUrl">
+								<audio class="player" ng-src="{{item.newDataUrl}}" type="{{item.mime}}">
+								</audio>
+								<div class="btn-group controls">
+									<button type="button" class="btn btn-sm btn-outline-secondary play" style="line-height: 0;">
+										<svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="svg-play" width="16px" height="16px" viewBox="0 0 100 100">
+										  <polygon points="10,10 90,45 10,90"/>
+										</svg>
+									</button>
+									<button type="button" class="btn btn-sm btn-outline-secondary pause" style="line-height: 0;">
+										<svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="svg-pause" width="16px" height="16px" viewBox="0 0 100 100">
+											<polygon points="10,10 35,10 35,90 10,90"/>
+											<polygon points="65,10 90,10 90,90 65,90"/>
+										</svg>
+									</button>
+									<button type="button" class="btn btn-sm btn-outline-secondary stop" style="line-height: 0;">
+										<svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="svg-stop" width="16px" height="16px" viewBox="0 0 100 100">
+											<polygon points="10,10 90,10 90,90 10,90"/>
+										</svg>
+									</button>
+								</div>
+							</my-audio>
+						</div>
+						<div class="w-100" ng-if="item.mime == 'text/plain'">
+							<input class="form-control-sm w-100" ng-model="item.newText" max-length-in-bytes="item.length" />
+						</div>
+					</div>
+					<div class="card-footer d-flex justify-content-between align-items-center">
+						<div class="btn-group">
+							<a class="btn btn-sm btn-outline-secondary download" role="button" href="{{item.dataUrl}}" download="{{item.offset}}.{{item.extension}}" title="Download">
+								<svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="svg-download" width="16px" height="16px" viewBox="0 0 100 100">
+									<polygon points="10,10 90,10 90,20 10,20"></polygon>
+									<polygon points="40,30 60,30 60,40 90,40 50,90 10,40 40,40"/>
+								</svg>
+							</a>
+							<div role="button" class="btn btn-sm btn-outline-secondary upload" title="Upload">
+								<svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="svg-upload" width="16px" height="16px" viewBox="0 0 100 100">
+									<polygon points="50,10 90,60 60,60 60,70 40,70 40,60 10,60"/>
+									<polygon points="10,80 90,80 90,90 10,90"></polygon>
+								</svg>
+								<input class="file-upload" type="file" id="file-{{item.offset}}"
+								onclick="this.value=null;"
+								file-upload 
+								ng-model="item.newFile"
+								process-file="mc.processFile(item)"
+								max-file-size="item.length"
+								/>
+							</div>
+						</div>
+					</div>
+				  </div>
+				</div>
+			</div>
+		</div>
+		<!---->
+		<div class="footer d-flex justify-content-between align-items-center align-content-center" style="padding: 8px">
+			<nav ng-if="mc.pages()>1">
+				<ul class="pagination pagination-sm justify-content-center mb-0">
+					<li class="page-item" ng-class="{disabled: mc.page<=1}">
+					  <a class="page-link" href="#" aria-label="First" ng-click="mc.goToPage(1);">
+						<span aria-hidden="true">&laquo;</span>
+						<span class="sr-only">First</span>
+					  </a>
+					</li>
+					
+					<li class="page-item" ng-class="{disabled: mc.page<=1}">
+					  <a class="page-link" href="#" aria-label="Previous" ng-click="mc.goToPage(mc.page-1);">
+						<span aria-hidden="true">&lsaquo;</span>
+						<span class="sr-only">Previous</span>
+					  </a>
+					</li>
+					
+					<li class="page-item">
+						<input class="form-control form-control-sm" style="border-radius: 0" type="number" ng-model="mc.page" min="1" max="{{mc.pages()==0?1:mc.pages()}}">
+					</li>
+					
+					<li class="page-item" ng-class="{disabled: mc.page>=mc.pages()}">
+					  <a class="page-link" href="#" aria-label="Next" ng-click="mc.goToPage(mc.page+1);">
+						<span aria-hidden="true">&rsaquo;</span>
+						<span class="sr-only">Next</span>
+					  </a>
+					</li>
+					
+					<li class="page-item" ng-class="{disabled: mc.page>=mc.pages()}">
+					  <a class="page-link" href="#" aria-label="Next" ng-click="mc.goToPage(mc.pages());">
+						<span aria-hidden="true">&raquo;</span>
+						<span class="sr-only">Last</span>
+					  </a>
+					</li>
+				</ul>
+			</nav>
+			<div>
+				<div class="d-flex justify-content-between align-items-center align-content-center">
+					<div ng-if="!mc.mode">
+						<button type="button" class="btn btn-sm btn-outline-secondary extract" ng-click="mc.createDescriptionFile()">JSON</button>
+					</div>
+
+					<button type="button" class="btn btn-sm btn-outline-secondary create" ng-click="mc.create()" ng-disabled="!mc.binaryFile">Create</button>
+				</div>
 			</div>
 		</div>
 	</div>

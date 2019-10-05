@@ -17,3 +17,9 @@
 	max-height: 100px;
 	max-width: 100px;
 }
+
+.disabled {
+  cursor: not-allowed;
+  pointer-events: none;
+  color: grey;
+}

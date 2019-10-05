@@ -48,9 +48,15 @@ function searchGIFs(file, onItemCallback, onSuccessCallback, onProgress) {
 				try {
 					var ds = new DataStream(array);
 					ds.skip(gif);
-					ds.readString(6);
+					var header = ds.readString(6);
+					if (header != 'GIF89a' && header != 'GIF87a') {
+						continue;
+					}
 					var width = ds.readUint16();
 					var height = ds.readUint16();
+					if ((width > 10000 || height > 10000) && (width > 1000 || height > 1000)) {
+						continue;
+					}
 					var flags = ds.readUint8(1);
 					ds.skip(2);
 					skipColorTable(ds, flags);
@@ -268,6 +274,13 @@ function searchPNGs(file, onItemCallback, onSuccessCallback, onProgress) {
 						}
 						previous = array.slice(png);
 						break;
+					} else {
+						var anotherImageInside = indexOf(array, [137, 80, 78, 71, 13, 10, 26, 10], png+1);
+						if (anotherImageInside != -1 && anotherImageInside < iend) {
+							/*broken PNG*/
+							previous = undefined;
+							continue;
+						}
 					}
 					previous = undefined;
 					if (width && height) {
@@ -438,7 +451,7 @@ function searchWAVs(file, onItemCallback, onSuccessCallback, onProgress) {
 					//add some length check here
 					if (true) {
 						console.log(channels);
-						var bytes = array.slice(wav, length+8);
+						var bytes = array.slice(wav, wav+length+8);
 						var duration = (1000*(length+8))/byteRate;
 						onItemCallback(offset - acc + wav, length+8, 'audio/wav', 'wav', undefined, undefined, bytes, duration);
 					}
@@ -491,8 +504,6 @@ function searchMP3s(file, onItemCallback, onSuccessCallback, onProgress) {
 			var arrayBuffer = this.result;
 			var array;
 			var acc = 0;
-			var framesCount = 0;
-			var bfs = {};
 			
 			if (previous) {
 				acc += previous.length;
@@ -506,6 +517,8 @@ function searchMP3s(file, onItemCallback, onSuccessCallback, onProgress) {
 			var jpg = indexOf(array, [255]); //\xff
 			for (;jpg!=-1;jpg=indexOf(array, [255], jpg+1)) {
 				try {
+					var framesCount = 0;
+					var bfs = {};
 					var ds = new DataStream(array);
 					ds.skip(jpg)
 					ds.endianness = false;
@@ -603,3 +616,222 @@ function searchMP3s(file, onItemCallback, onSuccessCallback, onProgress) {
 
 	chunkReaderBlock(offset, chunkSize, file);
 }
+
+function searchTIFFs(file, onItemCallback, onSuccessCallback, onProgress) {
+	var chunkReaderBlock = null;
+	var fileSize = file.size;
+	var chunkSize = 2 * 1024 * 1024;
+	var offset = 0;
+
+	var previous = undefined;
+	
+	const find = (arr, offset = 0) => {
+		//II - little-endian, MM - big-endian
+		const ii = indexOf(arr, [73,73,42,00], offset), mm = indexOf(arr, [77,77,00,42], offset);
+		if (ii == -1) return mm;
+		if (mm == -1) return ii;
+		return Math.min(ii, mm);
+	}
+
+	var readEventHandler = function(evt) {
+		if (evt.target.error == null) {
+			var arrayBuffer = this.result;
+			var array;
+			var acc = 0;
+			
+			if (previous) {
+				acc += previous.length;
+				array = new Uint8Array(previous.length + arrayBuffer.byteLength);
+				array.set(previous, 0);
+				array.set(new Uint8Array(arrayBuffer), previous.length);
+			} else {
+				array = new Uint8Array(arrayBuffer);
+			}
+			
+			var tiff = find(array); 
+			for (;tiff!=-1;tiff=find(array, tiff+1)) {
+				var width = undefined, height = undefined;
+				try {
+					var ds = new DataStream(array);
+					ds.skip(tiff)
+					ds.endianness = ds.readUint8() == 73;
+					ds.skip(3);
+					const offset = ds.readUint32();					
+					continue; //TODO:
+					previous = undefined;
+					if (width && height) {
+						var bytes = array.slice(tiff, eof);
+						onItemCallback(offset - acc + tiff, eof-tiff, 'image/tiff', 'tiff', width, height, bytes);
+					}
+				} catch (e) {
+					if (!width && ds.position - tiff > (width * height * 4)) {
+						previous = undefined;
+						continue;
+					}
+					previous = array.slice(tiff);
+					break;
+				}
+			}
+
+			offset += arrayBuffer.byteLength;
+		} else {
+			return;
+		}
+		if (offset >= fileSize) {
+			onSuccessCallback();
+			return;
+		}
+		if (!previous) {
+			offset -= 3; //4 bytes header length - 1
+		}
+		chunkReaderBlock(offset, chunkSize, file);
+	}
+
+	chunkReaderBlock = function(_offset, length, _file) {
+		var r = new FileReader();
+		var blob = _file.slice(_offset, length + _offset);
+		r.onload = readEventHandler;
+		r.readAsArrayBuffer(blob);
+		onProgress(~~(100*_offset/fileSize));
+	}
+
+	chunkReaderBlock(offset, chunkSize, file);
+}
+
+const powerOf2 = v => v>0 && !((v - 1) & v);
+
+function searchICOs(file, onItemCallback, onSuccessCallback, onProgress) {
+	var chunkReaderBlock = null;
+	var fileSize = file.size;
+	var chunkSize = 2 * 1024 * 1024;
+	var offset = 0;
+
+	var previous = undefined;
+	
+	var readEventHandler = function(evt) {
+		if (evt.target.error == null) {
+			var arrayBuffer = this.result;
+			var array;
+			var acc = 0;
+			
+			if (previous) {
+				acc += previous.length;
+				array = new Uint8Array(previous.length + arrayBuffer.byteLength);
+				array.set(previous, 0);
+				array.set(new Uint8Array(arrayBuffer), previous.length);
+			} else {
+				array = new Uint8Array(arrayBuffer);
+			}
+			
+			var ico = indexOf(array, [0,0,1,0]); 
+			for (;ico!=-1;ico=indexOf(array, [0,0,1,0], ico+1)) {
+				var width = 0, height = 0;
+				try {
+					var ds = new DataStream(array);
+					ds.skip(ico+4)
+					ds.endianness = true;
+					const count = ds.readUint16();
+					if (count == 0 || count > 25) {
+						previous = undefined;
+						continue;
+					}
+					var total = 0;
+					var previousEnd = undefined;
+					var widths = [], heights = [];
+					var continueFor = false;
+					for (var i=0; i<count; i++) {
+						const cw = ds.readUint8();
+						const ch = ds.readUint8();
+						//both width and height must be greater than 1, or both must be 1
+						if (!!(cw>1 ^ ch>1) && (cw!=ch)) {
+							continueFor = true;
+							break;
+						}
+						
+						if (cw>width || ch>height) {
+							width = cw;
+							height = ch;
+						}
+						const colors = ds.readUint8();
+						const reserved = ds.readUint8();
+						const numPlanes = ds.readUint16();
+						const bitsPerPixel = ds.readUint16();
+						if (bitsPerPixel == 0 || bitsPerPixel > 32 || !powerOf2(bitsPerPixel)) {
+							continueFor = true;
+							break;
+						}
+						const dataSize = ds.readUint32();
+						const dataOffset = ds.readUint32();
+						if ((dataSize == 0) || (previousEnd && previousEnd != dataOffset)) {
+							continueFor = true;
+							break;
+						}
+						previousEnd = dataOffset + dataSize;
+						total += dataSize;
+					}
+					if (continueFor) {
+						continue;
+					}
+					//console.log(widths, heights);
+					ds.skip(total);
+					var icoSize = ds.position - ico;
+					previous = undefined;
+					if (width && height) {
+						var bytes = array.slice(ico, ico+icoSize);
+						//should icon has mime 'image/vnd.microsoft.icon'?
+						onItemCallback(offset - acc + ico, icoSize, 'image/x-icon', 'ico', width, height, bytes);
+						ico += icoSize;
+					}
+				} catch (e) {
+					if (!width && ds.position - ico > (width * height * 4)) {
+						previous = undefined;
+						continue;
+					}
+					previous = array.slice(ico);
+					break;
+				}
+			}
+
+			offset += arrayBuffer.byteLength;
+		} else {
+			return;
+		}
+		if (offset >= fileSize) {
+			onSuccessCallback();
+			return;
+		}
+		if (!previous) {
+			offset -= 3; //4 bytes header length - 1
+		}
+		chunkReaderBlock(offset, chunkSize, file);
+	}
+
+	chunkReaderBlock = function(_offset, length, _file) {
+		var r = new FileReader();
+		var blob = _file.slice(_offset, length + _offset);
+		r.onload = readEventHandler;
+		r.readAsArrayBuffer(blob);
+		onProgress(~~(100*_offset/fileSize));
+	}
+
+	chunkReaderBlock(offset, chunkSize, file);
+}
+
+const readFileAsArrayBuffer = (inputFile, offset, length) => {
+	const tmp = new FileReader();
+	const blob = inputFile.slice(offset, offset + length);
+	return new Promise((resolve, reject) => {
+		tmp.onerror = () => {
+			tmp.abort();
+			reject("Can't read file.");
+		};
+		tmp.onload = (evt) => {
+			if (evt.target.error == null) {
+				resolve(tmp.result);
+			} else {
+				reject();
+			}
+		};
+		tmp.readAsArrayBuffer(blob);
+	});
+};
