@@ -9,3 +9,5 @@ This app is just a prototype! Code is not clean.
 https://lampersky.github.io/BinaryFileEditor/
 
 [![BinaryFileEditor in action](https://img.youtube.com/vi/xpWef3vGuWw/0.jpg)](https://www.youtube.com/watch?v=xpWef3vGuWw)
+
+[![Translate firmware into your language](https://img.youtube.com/vi/83EKqi7rYJY/0.jpg)](https://www.youtube.com/watch?v=83EKqi7rYJY)
