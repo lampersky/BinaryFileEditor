@@ -206,7 +206,7 @@
 		vm.searchMode = true;
 		vm.clearItems = function() { vm.items = []; $scope.$apply(); };
 
-		function sortOld(sortBy) {
+		function sort(sortBy) {
 			var idx = vm.sortBy.indexOf(sortBy);
 			if (idx != -1) {
 				sortBy = (idx == 0 ? '-' + sortBy : sortBy.slice(0));
