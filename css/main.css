@@ -23,3 +23,11 @@
   pointer-events: none;
   color: grey;
 }
+
+.drop-in-progress {
+	border-color: red !important;
+	-moz-transition: all .2s ease-in;
+    -o-transition: all .2s ease-in;
+    -webkit-transition: all .2s ease-in;
+    transition: all .2s ease-in;
+}

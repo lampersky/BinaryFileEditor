@@ -12,23 +12,45 @@
 			require: "ngModel",
 			scope: {
 				processFile: '&',
-				maxFileSize: '='
+				maxFileSize: '=',
+				classOver: '@'
 			},
 			link: function(scope, element, attrs, ngModel) {
-				var processDragOverOrEnter;
-				processDragOverOrEnter = function(event) {
+				element.bind('dragleave', function(event) {
 					if (event != null) {
 						event.stopPropagation();
 						event.preventDefault();
+						if (scope.classOver) {
+						   $(event.currentTarget).removeClass(scope.classOver);
+						}
 					}
-					event.dataTransfer.effectAllowed = 'copy';
 					return false;
-				};
-				element.bind('dragover', processDragOverOrEnter);
-				element.bind('dragenter', processDragOverOrEnter);
+				});
+				element.bind('dragover', function (event) {
+					if (event != null) {
+						event.stopPropagation();
+						event.preventDefault();
+						event.dataTransfer.effectAllowed = 'copy';
+						if (scope.classOver) {
+						   $(event.currentTarget).addClass(scope.classOver);
+						}
+					}
+					return false;
+				});
+				element.bind('dragenter', function(event) {
+					if (event != null) {
+						event.stopPropagation();
+						event.preventDefault();
+						event.dataTransfer.effectAllowed = 'copy';
+					}
+					return false;
+				});
 				return element.bind('drop', function(event) {
 					if (event != null) {
 						event.preventDefault();
+						if (scope.classOver) {
+						   $(event.currentTarget).removeClass(scope.classOver);
+						}
 					}
 					if (event.dataTransfer.files.length == 1) {
 						if (!scope.maxFileSize || (scope.maxFileSize && event.dataTransfer.files[0].size <= scope.maxFileSize)) {
@@ -181,7 +203,7 @@
 		vm.pages = function() {
 			return Math.ceil(vm.items.length / 60);
 		};
-		vm.mode = true;
+		vm.searchMode = true;
 		vm.clearItems = function() { vm.items = []; $scope.$apply(); };
 
 		function sort(sortBy) {
@@ -441,6 +463,11 @@
 		function readBinaryFile(file, items, onProgress, onSuccessCallback) {
 			var chunkReaderBlock = null;
 			var item = 0;
+			
+			if (items.length == 0) {
+				onSuccessCallback(items);
+				return;
+			}
 
 			var readEventHandler = function(evt) {
 				if (evt.target.error == null) {
@@ -512,6 +539,10 @@
 			}
 			return result;
 		}
+		
+		const typedArray = hex => new Uint8Array(hex.match(/[\da-f]{2}/gi).map(function (h) {
+			return parseInt(h, 16)
+		}));
 		
 		init();
 	}
