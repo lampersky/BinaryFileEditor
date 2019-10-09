@@ -234,7 +234,11 @@
 				item.newArray = array;
 				item.newDataUrl = dataURL;
 				if (item.mime == 'text/plain') {
-					item.newText = decodeUtf8(array);
+					try {
+						item.newText = decodeUtf8(array);
+					} catch {
+						//is this file really UTF-8?
+					}
 				}
 				item.newLength = array.length;
 				$scope.$apply();
@@ -478,9 +482,13 @@
 							type: items[item].mime
 						});
 						if (items[item].mime == 'text/plain') {
-							var text = decodeUtf8(array);
-							items[item].text = text;
-							items[item].newText = text;
+							try {
+								var text = decodeUtf8(array);
+								items[item].text = text;
+								items[item].newText = text;
+							} catch {
+								//probably array doesn't contain UTF-8
+							}
 						}
 						var dataURL = window.URL.createObjectURL(data);
 						items[item].dataUrl = dataURL;

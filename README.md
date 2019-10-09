@@ -4,7 +4,9 @@ Binary file editor, patcher
 
 Currently functionality of this application is very limited, but you should be able to replace any gif/mp3/jpg/wav/png/bmp or text in your binary file (ie. firmware).
 
-This app is just a prototype! Code is not clean.
+Sometimes app can found file which is only very similar to known images/sounds formats, but in fact it is just a random bytes array.
+
+This app is just a prototype! Code is not clean, optimal nor final.
 
 https://lampersky.github.io/BinaryFileEditor/
 
